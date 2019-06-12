@@ -1,0 +1,44 @@
+buildscript {
+    repositories {
+        jcenter()
+        maven {
+            name = "forge"
+            url = "http://files.minecraftforge.net/maven"
+        }
+    }
+    dependencies {
+        classpath "net.minecraftforge.gradle:ForgeGradle:2.0-SNAPSHOT"
+    }
+}
+apply plugin: "net.minecraftforge.gradle.forge"
+
+version = "1.0"
+group = "io.github.zekerzhayard"
+archivesBaseName = "NoServerArgumentMod_MC1.7.10_1.12.2"
+
+jar {
+    manifest.attributes([
+        "TweakClass": "io.github.zekerzhayard.noserverargument.asm.Tweaker"
+    ])
+    exclude "cpw/**"
+}
+
+minecraft {
+    version = "1.8-11.14.4.1563"
+    runDir = "run"
+    mappings = "stable_18"
+}
+
+processResources {
+    inputs.property "version", project.version
+    inputs.property "mcversion", project.minecraft.version
+
+    from(sourceSets.main.resources.srcDirs) {
+        include 'mcmod.info'
+        expand 'version':project.version
+    }
+
+    from(sourceSets.main.resources.srcDirs) {
+        exclude 'mcmod.info'
+    }
+}
