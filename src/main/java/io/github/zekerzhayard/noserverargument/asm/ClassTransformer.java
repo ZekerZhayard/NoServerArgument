@@ -15,6 +15,7 @@ import org.objectweb.asm.tree.VarInsnNode;
 public class ClassTransformer implements IClassTransformer {
     @Override
     public byte[] transform(String className, String transformedName, byte[] basicClass) {
+        System.out.println("Found the class: " + className + " -> " + transformedName);
         if (transformedName.equals("net.minecraft.client.main.Main") || transformedName.equals("com.netease.mc.mod.friendplay.GuiOpenEventHandler")) {
             System.out.println("Found the class: " + className + " -> " + transformedName);
             ClassNode cn = new ClassNode();
@@ -26,6 +27,7 @@ public class ClassTransformer implements IClassTransformer {
                     insnList.add(new VarInsnNode(Opcodes.ALOAD, 0));
                     insnList.add(new MethodInsnNode(Opcodes.INVOKESTATIC, "NoServerArgumentHook", "removeServerArgs", "([Ljava/lang/String;)[Ljava/lang/String;", false));
                     insnList.add(new VarInsnNode(Opcodes.ASTORE, 0));
+                    insnList.add(new InsnNode(Opcodes.RETURN));
                     mn.instructions.insert(insnList);
                 } else if (mn.name.equals("MainMenuOpen") && mn.desc.equals("(Lnet/minecraftforge/client/event/GuiOpenEvent;)V")) {
                     System.out.println("Found the method: " + mn.name + mn.desc);

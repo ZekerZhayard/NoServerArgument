@@ -12,15 +12,24 @@ buildscript {
 }
 apply plugin: "net.minecraftforge.gradle.forge"
 
-version = "1.0"
+sourceCompatibility = targetCompatibility = "1.7"
+compileJava {
+    sourceCompatibility = targetCompatibility = "1.7"
+}
+
+version = "2.0"
 group = "io.github.zekerzhayard"
 archivesBaseName = "NoServerArgumentMod_MC1.7.10_1.12.2"
 
 jar {
+    from {
+        zipTree("libs/launchwrapper-1.12.jar").matching {
+            include "net/**"
+        }
+    }
     manifest.attributes([
         "TweakClass": "io.github.zekerzhayard.noserverargument.asm.Tweaker"
     ])
-    exclude "cpw/**"
 }
 
 minecraft {
