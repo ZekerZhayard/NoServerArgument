@@ -23,6 +23,7 @@ import org.apache.logging.log4j.LogManager;
 
 public class NewLaunchClassLoader extends LaunchClassLoader {
     private ClassLoader parent = (ClassLoader) this.readField("parent");
+    private ClassLoader boot = this.getClass().getClassLoader();
     
     @SuppressWarnings("unchecked")
     private Map<String, Class<?>> cachedClasses = (Map<String, Class<?>>) this.readField("cachedClasses");
@@ -43,7 +44,6 @@ public class NewLaunchClassLoader extends LaunchClassLoader {
     public NewLaunchClassLoader(URL[] sources) {
         super(sources);
         this.classLoaderExceptions.clear();
-        this.transformerExceptions.clear();
         this.addClassLoaderExclusion("io.github.zekerzhayard.noserverargument.launch.");
     }
 
@@ -51,6 +51,10 @@ public class NewLaunchClassLoader extends LaunchClassLoader {
     public Class<?> findClass(final String name) throws ClassNotFoundException {
         if (this.invalidClasses.contains(name)) {
             throw new ClassNotFoundException(name);
+        }
+        
+        if (name.startsWith("com.mojang.authlib.AuthenticationCpp") || name.startsWith("com.netease.mc.mod.network.")) {
+            return this.boot.loadClass(name);
         }
 
         for (final String exception : this.classLoaderExceptions) {
