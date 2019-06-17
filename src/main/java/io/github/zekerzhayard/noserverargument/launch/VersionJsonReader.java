@@ -41,8 +41,6 @@ public class VersionJsonReader {
             try {
                 if (libPath.equals("./libraries/net/minecraft/launchwrapper/1.12/launchwrapper-1.12.jar")) {
                     return null;
-                } else if (libPath.contains("authlib")) {
-                    return new File("./libraries/com/mojang/authlib/1.5.21/authlib-1.5.21.jar").toURI().toURL();
                 }
                 return new File(libPath).toURI().toURL();
             } catch (MalformedURLException e) {

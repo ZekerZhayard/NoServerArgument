@@ -10,6 +10,7 @@ import java.net.URLConnection;
 import java.net.URLDecoder;
 import java.security.CodeSigner;
 import java.security.CodeSource;
+import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
 import java.util.jar.JarEntry;
@@ -23,7 +24,6 @@ import org.apache.logging.log4j.LogManager;
 
 public class NewLaunchClassLoader extends LaunchClassLoader {
     private ClassLoader parent = (ClassLoader) this.readField("parent");
-    private ClassLoader boot = this.getClass().getClassLoader();
     
     @SuppressWarnings("unchecked")
     private Map<String, Class<?>> cachedClasses = (Map<String, Class<?>>) this.readField("cachedClasses");
@@ -34,8 +34,7 @@ public class NewLaunchClassLoader extends LaunchClassLoader {
     @SuppressWarnings("unchecked")
     private Set<String> classLoaderExceptions = (Set<String>) this.readField("classLoaderExceptions");
     
-    @SuppressWarnings("unchecked")
-    private Set<String> transformerExceptions = (Set<String>) this.readField("transformerExceptions");
+    private Set<String> transformerClasses = new HashSet<>();
     
     private static final boolean DEBUG = (boolean) NewLaunchClassLoader.readStaticField("DEBUG");
     
@@ -45,16 +44,25 @@ public class NewLaunchClassLoader extends LaunchClassLoader {
         super(sources);
         this.classLoaderExceptions.clear();
         this.addClassLoaderExclusion("io.github.zekerzhayard.noserverargument.launch.");
+        this.addClassLoaderExclusion("com.mojang.authlib.AuthenticationCpp");
+        this.addClassLoaderExclusion("com.netease.mc.mod.network."); // Netease launchwrapper
+        
+        this.addTransformerClass("net.minecraftforge.fml.common.launcher.FMLTweaker");
+        this.addTransformerClass("net.minecraftforge.fml.relauncher.FMLLaunchHandler");
+        this.addTransformerClass("net.minecraft.launchwrapper.LaunchClassLoader");
+    }
+    
+    public void addTransformerClass(String name) {
+        this.transformerClasses.add(name);
     }
 
     @Override
     public Class<?> findClass(final String name) throws ClassNotFoundException {
+        if (!name.startsWith("com.netease.mc.mod.network.") && name.startsWith("com.netease.mc.")) {
+            this.invalidClasses.add(name); // Netease mods will not be loaded.
+        }
         if (this.invalidClasses.contains(name)) {
             throw new ClassNotFoundException(name);
-        }
-        
-        if (name.startsWith("com.mojang.authlib.AuthenticationCpp") || name.startsWith("com.netease.mc.mod.network.")) {
-            return this.boot.loadClass(name);
         }
 
         for (final String exception : this.classLoaderExceptions) {
@@ -67,16 +75,15 @@ public class NewLaunchClassLoader extends LaunchClassLoader {
             return this.cachedClasses.get(name);
         }
 
-        for (final String exception : this.transformerExceptions) {
-            if (name.startsWith(exception)) {
-                try {
-                    final Class<?> clazz = super.findClass(name);
-                    this.cachedClasses.put(name, clazz);
-                    return clazz;
-                } catch (ClassNotFoundException e) {
-                    this.invalidClasses.add(name);
-                    throw e;
-                }
+        if (!this.transformerClasses.contains(name)) {
+            try {
+                super.addTransformerExclusion(name);
+                final Class<?> clazz = super.findClass(name);
+                this.cachedClasses.put(name, clazz);
+                return clazz;
+            } catch (ClassNotFoundException e) {
+                this.invalidClasses.add(name);
+                throw e;
             }
         }
 
@@ -132,8 +139,14 @@ public class NewLaunchClassLoader extends LaunchClassLoader {
                 saveTransformedClass(transformedClass, transformedName);
             }
 
-            String urlPath = URLDecoder.decode(urlConnection.getURL().getFile(), "UTF-8").split("!/")[0].substring(6);
-            URL url = new File(urlPath).toURI().toURL();
+            URL url = new File(URLDecoder.decode(urlConnection.getURL().getFile(), "UTF-8").split("!/")[0].substring(6)).toURI().toURL();
+            /*if (this.transformerClasses.contains(name)) {
+                String urlPath = URLDecoder.decode(urlConnection.getURL().getFile(), "UTF-8").split("!/")[0].substring(6);
+                url = new File(urlPath).toURI().toURL();
+            } else {
+                url = urlConnection.getURL();
+            }*/
+
             final CodeSource codeSource = urlConnection == null ? null : new CodeSource(url, signers);
             final Class<?> clazz = defineClass(transformedName, transformedClass, 0, transformedClass.length, codeSource);
             this.cachedClasses.put(transformedName, clazz);

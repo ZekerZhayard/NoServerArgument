@@ -1,5 +1,7 @@
 package io.github.zekerzhayard.noserverargument.launch.asm;
 
+import java.util.HashSet;
+
 import net.minecraft.launchwrapper.IClassTransformer;
 import org.objectweb.asm.ClassReader;
 import org.objectweb.asm.ClassWriter;
@@ -14,9 +16,16 @@ import org.objectweb.asm.tree.MethodNode;
 import org.objectweb.asm.tree.VarInsnNode;
 
 public class SecurityBreaker implements IClassTransformer {
+    private HashSet<String> transformerClasses = new HashSet<>();
+    
+    public SecurityBreaker() {
+        this.transformerClasses.add("net.minecraftforge.fml.common.launcher.FMLTweaker");
+        this.transformerClasses.add("net.minecraftforge.fml.relauncher.FMLLaunchHandler");
+    }
+    
     @Override
     public byte[] transform(String className, String transformedName, byte[] basicClass) {
-        if (className.equals("net.minecraftforge.fml.common.launcher.FMLTweaker") || className.equals("net.minecraftforge.fml.relauncher.FMLLaunchHandler")) {
+        if (this.transformerClasses.contains(className)) {
             System.out.println("Found the class: " + className);
             ClassNode cn = new ClassNode();
             new ClassReader(basicClass).accept(cn, ClassReader.EXPAND_FRAMES);
